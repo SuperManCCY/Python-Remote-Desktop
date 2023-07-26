@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Desktop Client</title>
+</head>
+<body>
+<!--    <h1>Remote Desktop Client</h1>-->
+    <img id="screenshot" src="" alt="Screenshot" width="{{ screen_width }}" height="{{ screen_height }}">
+    <script>
+        const websocket = new WebSocket("ws://localhost:8000/ws/");
+
+        websocket.onopen = () => {
+            console.log("WebSocket connected!");
+            // 连接成功后请求屏幕截图
+            websocket.send("screenshot");
+        };
+
+        websocket.onmessage = event => {
+            // 处理从后端接收到的数据
+            const data = event.data;
+            const blob = new Blob([data], {type: "image/jpeg"});
+            const screenshotImage = document.getElementById("screenshot");
+            screenshotImage.onerror = function() {
+              console.log('图片加载失败，刷新页面...');
+              location.reload(); // 刷新页面
+            };
+            screenshotImage.src = URL.createObjectURL(blob);
+            websocket.send("screenshot");
+        };
+
+        websocket.onclose = () => {
+            console.log("WebSocket disconnected!");
+            alert("连接断开，将刷新重试！")
+            location.reload()
+        };
+
+        // 鼠标移动事件处理
+        document.addEventListener("mousemove", event => {
+            // 计算鼠标位置信息相对于屏幕截图的坐标
+            const screenshotImage = document.getElementById("screenshot");
+            const rect = screenshotImage.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            // 将鼠标位置信息发送给服务端（使用映射后的坐标）
+            {#websocket.send(`mouseMove:${mouseX},${mouseY}`);#}
+        });
+
+        // 鼠标点击事件处理
+        document.addEventListener("click", event => {
+            // 计算鼠标位置信息相对于屏幕截图的坐标
+            const screenshotImage = document.getElementById("screenshot");
+            const rect = screenshotImage.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            // 将鼠标点击信息发送给服务端（使用映射后的坐标）
+            websocket.send(`mouseClick:${mouseX},${mouseY}`);
+        });
+
+        // 鼠标右键点击事件处理
+        document.addEventListener("contextmenu", event => {
+            event.preventDefault(); // 阻止默认的右键菜单弹出
+            // 计算鼠标位置信息相对于屏幕截图的坐标
+            const screenshotImage = document.getElementById("screenshot");
+            const rect = screenshotImage.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            // 将鼠标右键点击信息发送给服务端（使用映射后的坐标）
+            websocket.send(`mouseRightClick:${mouseX},${mouseY}`);
+        });
+
+        // 键盘按键按下事件处理
+        document.addEventListener("keydown", event => {
+            const key = event.key;
+            // 将键盘按键信息发送给服务端
+            websocket.send(`keyDown:${key}`);
+        });
+
+        // 键盘按键释放事件处理
+        document.addEventListener("keyup", event => {
+            const key = event.key;
+            // 将键盘按键信息发送给服务端
+            websocket.send(`keyUp:${key}`);
+        });
+    </script>
+</body>
+</html>

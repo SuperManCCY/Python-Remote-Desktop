@@ -1,0 +1,5 @@
+pyautogui
+fastapi
+pillow
+jinja2
+uvicorn[standard]
